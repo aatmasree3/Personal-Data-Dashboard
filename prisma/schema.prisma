@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  name      String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  files     FileUpload[]
+}
+
+model FileUpload {
+  id          String    @id @default(cuid())
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  status      String    // "processed", "processing", "failed"
+  filePath    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  analysis    Analysis?
+}
+
+model Analysis {
+  id           String    @id @default(cuid())
+  rowCount     Int
+  columnCount  Int
+  missingValues Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  fileId       String    @unique
+  file         FileUpload @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  columns      Column[]
+}
+
+model Column {
+  id           String    @id @default(cuid())
+  name         String
+  dataType     String    // "numeric", "categorical", "datetime", "boolean"
+  stats        Json      // Stores statistics as JSON
+  distribution Json?     // For numeric columns
+  categories   Json?     // For categorical columns
+  analysisId   String
+  analysis     Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisId, name])
+}
